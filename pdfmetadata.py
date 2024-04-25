@@ -7,17 +7,19 @@ import PyPDF2
 import PyPDF2
 
 
-def clear_metadata(document_info):
-    """Clears all metadata except the title."""
-    title = document_info.title if '/Title' in document_info else ''
-    document_info.clear()
-    document_info.title = title
-
 def run():
-    """Function to execute when the 'Run' button is clicked."""
-    # Get the selected directory
+    """Function to execute when the 'Run' button is clicked.
+
+    This function prompts the user to select a directory containing PDF files
+    using a file dialog. It then iterates over the PDF files in the selected
+    directory, updates the metadata of each PDF file to set the title as the
+    filename without extension, and saves the modified PDF files with a
+    'modified_' prefix in the same directory.
+
+    """
+    # Get the selected directory using a file dialog
     data_folder = filedialog.askdirectory()
-    if not data_folder:  # User canceled selection
+    if not data_folder:  # If the user cancels the selection, display a message and return
         status_var.set("No directory selected.")
         return
     
@@ -28,7 +30,7 @@ def run():
 
             # Open the PDF file in read mode
             with open(filepath, "rb") as pdf_file:
-                # Create a PdfFileReader object
+                # Create a PdfFileReader object to read the PDF
                 pdf_reader = PyPDF2.PdfFileReader(pdf_file)
                 pdf_writer = PyPDF2.PdfFileWriter()
 
@@ -40,17 +42,17 @@ def run():
                 # Get the document information
                 document_info = pdf_reader.getDocumentInfo()
 
-                # Clear metadata except the title and replace the title with the filename without extension
-                clear_metadata(document_info)
-                document_info.title = os.path.splitext(filename)[0]
+                # Create a PdfFileWriter object to update metadata
+                pdf_writer_with_metadata = PyPDF2.PdfFileWriter()
+                pdf_writer_with_metadata.addMetadata(document_info)
 
-                # Add modified metadata
-                pdf_writer.addMetadata(document_info)
+                # Update metadata: set title as filename without extension
+                pdf_writer_with_metadata.set_information(pdf_writer_with_metadata.getNumPages() - 1, '/Title', os.path.splitext(filename)[0])
 
                 # Write the modified PDF to a new file
                 output_filepath = os.path.join(data_folder, f"modified_{filename}")
                 with open(output_filepath, "wb") as output_pdf_file:
-                    pdf_writer.write(output_pdf_file)
+                    pdf_writer_with_metadata.write(output_pdf_file)
 
                 # Display status
                 status_var.set(f"Metadata updated for {filename}")
@@ -58,7 +60,8 @@ def run():
 
 # Create the Tkinter root window
 root = tk.Tk()
-root.title("PDF Metadata Editor")
+root.title("Metadata Cleaner")  # Set window title
+root.geometry("200x200")  # Set window size
 
 # Create a label for displaying status
 status_var = tk.StringVar()
